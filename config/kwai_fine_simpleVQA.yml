@@ -1,0 +1,62 @@
+name: SimpleVQA_Fine
+num_epochs: 10           # 精细阶段增加训练轮数，让模型有更多时间调整权重
+l_num_epochs: 5          # 增加精细调优轮数
+warmup_epochs: 1         # 精细阶段的预热期减少，让模型快速进入收敛
+
+ema: true
+save_model: true
+batch_size: 2            # 减小批次大小，以便处理更高分辨率的数据
+num_workers: 6
+
+data:
+    train:
+        type: ViewDecompositionDataset_add_forSimpleVQA
+        args:
+            weight: 0.540
+            phase: train
+            anno_file: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/Train/train_data - 1.csv"
+            data_prefix: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/Train"
+            data_prefix_3D: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/feature/simpleVQA/kvq"
+            feature_type: SlowFast
+            sample_types:
+                simpleVQA:
+                    resize: 720          # 提高分辨率，捕获更多细节
+                    crop: 512            # 裁剪大小提高，增大有效区域
+                    clip_len: 8
+                    frame_interval: 10
+                    t_frag: 8
+                    num_clips: 2         # 增加视频剪辑数量，增强模型的时间特征学习
+
+    val:
+        type: ViewDecompositionDataset_add_forSimpleVQA
+        args:
+            phase: test
+            anno_file: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/Train/train_data - 1.csv"
+            data_prefix: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/Train"
+            data_prefix_3D: "C:/Project/KVQ/KVQ-Challenge-CVPR-NTIRE2024/feature/simpleVQA/kvq"
+            feature_type: SlowFast
+            sample_types:
+                simpleVQA:
+                    resize: 720
+                    crop: 512
+                    clip_len: 8
+                    frame_interval: 10
+                    t_frag: 8
+                    num_clips: 2
+
+model:
+    type: simpleVQA
+    args:
+        simpleVQA:
+            backbone:
+            head:
+                in_channels: 9472
+                hidden_channels: 256   # 增大隐藏层的通道数，以增强模型学习复杂特征的能力
+
+optimizer:
+    lr: !!float 1e-5              # 精细阶段降低学习率，使模型能更稳定地收敛
+    backbone_lr_mult: !!float 1
+    wd: 0.02                      # 减少权重衰减，适应精细调整的需求
+
+load_path: checkpoint\SimpleVQA_epoch_6_head_val-ltest_s_finetuned.pth
+test_load_path: checkpoint\SimpleVQA_epoch_6_head_val-ltest_s_finetuned.pth
